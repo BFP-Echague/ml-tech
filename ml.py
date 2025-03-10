@@ -28,7 +28,7 @@ def pca(df: pd.DataFrame, n_components: int):
     pca_model = PCA(n_components=n_components)
 
     df_remove_id = drop_id(df)
-    df_pca = pd.DataFrame(data=pca_model.fit(df_remove_id), columns=["PC1", "PC2"])
+    df_pca = pd.DataFrame(data=pca_model.fit_transform(df_remove_id), columns=[f"PC{i}" for i in range(1, n_components + 1)])
     df_pca["id"] = df["id"]
 
     return df_pca
@@ -37,7 +37,7 @@ def pca(df: pd.DataFrame, n_components: int):
 
 class ClusterResult():
     """Represents one result of clustering."""
-    def __init__(self, cluster_count: int, labels: dict[int, list[int]], score: float):
+    def __init__(self, cluster_count: int, labels: list[int], score: float):
         self.cluster_count = cluster_count
         self.labels = labels
         self.score = score
@@ -51,9 +51,11 @@ class ClusterResult():
         kmeans.fit(df_kmeans_input)
 
 
-        labels: dict[int, list[int]] = { i: [] for i in range(cluster_count) }
+        labels_dict: dict[int, list[int]] = { i: [] for i in range(cluster_count) }
         for idx, label in enumerate(kmeans.labels_):
-            labels[label].append(df.iloc[[idx]]["id"].array[0].item())
+            labels_dict[label].append(df.iloc[[idx]]["id"].array[0].item())
+
+        labels = [value for value in labels_dict.values()]
 
         return ClusterResult(cluster_count, labels, silhouette_score(df, kmeans.labels_).item())
 
@@ -61,7 +63,7 @@ class ClusterResult():
     def to_json(self):
         """Converts the object to a JSON serializable format."""
         return {
-            "cluster_count": self.cluster_count,
+            "clusterCount": self.cluster_count,
             "labels": self.labels,
             "score": self.score
         }
@@ -70,9 +72,9 @@ class ClusterResult():
 
 class ClusterSilhouetteResult():
     """Represents multiple results of clustering."""
-    def __init__(self, clusters: list[ClusterResult], optimal_cluster: ClusterResult):
+    def __init__(self, clusters: list[ClusterResult], optimal_cluster_count: int):
         self.clusters = clusters
-        self.optimal_cluster = optimal_cluster
+        self.optimal_cluster_count = optimal_cluster_count
 
 
     @classmethod
@@ -83,15 +85,15 @@ class ClusterSilhouetteResult():
             for cluster_count in range(cluster_count_start, cluster_count_end + 1)
         ]
 
-        optimal_cluster = max(clusters, key=lambda cluster: cluster.score)
+        optimal_cluster_count = max(clusters, key=lambda cluster: cluster.score).cluster_count
 
-        return ClusterSilhouetteResult(clusters, optimal_cluster)
+        return ClusterSilhouetteResult(clusters, optimal_cluster_count)
 
     def to_json(self):
         """Converts the object to a JSON serializable format."""
         return {
-            "clusters": [cluster.to_json() for cluster in self.clusters],
-            "optimal_cluster": self.optimal_cluster.to_json()
+            "clusterResults": [cluster.to_json() for cluster in self.clusters],
+            "optimalClusterCount": self.optimal_cluster_count
         }
 
 
