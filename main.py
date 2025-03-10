@@ -18,9 +18,9 @@ def hello_world():
 
 
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    """Returns a prediction."""
+@app.route("/cluster", methods=["POST"])
+def cluster():
+    """Returns the clusters."""
     request_json: dict[str, dict[str] | list] = request.json
 
     settings = request_json["settings"]
@@ -28,7 +28,7 @@ def predict():
 
     return perform_pipeline(
         df,
-        settings["component_count"],
-        settings["cluster_count_start"],
-        settings["cluster_count_end"]
+        settings["componentCount"],
+        settings["clusterCountStart"],
+        settings["clusterCountEnd"]
     ).to_json()
